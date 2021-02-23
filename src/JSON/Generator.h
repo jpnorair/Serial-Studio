@@ -89,6 +89,7 @@ public:
     {
         kManual = 0x00,
         kAutomatic = 0x01,
+        kScript = 0x02,
     };
     Q_ENUMS(OperationMode)
 

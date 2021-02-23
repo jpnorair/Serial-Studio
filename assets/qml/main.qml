@@ -588,7 +588,7 @@ ApplicationWindow {
         onEntered: {
             // Get file name & set color of rectangle accordingly
             var path = drag.urls[0].toString()
-            if (path.endsWith(".json") || path.endsWith(".csv")) {
+            if (path.endsWith(".json") || path.endsWith(".js") || path.endsWith(".csv")) {
                 drag.accept(Qt.LinkAction)
                 dropRectangle.color = Qt.darker(palette.highlight, 1.4)
             }
@@ -602,7 +602,7 @@ ApplicationWindow {
         }
 
         //
-        // Open *.json & *.csv files on drag drop
+        // Open *.js, *.json, and *.csv files on drag drop
         //
         onDropped: {
             // Hide rectangle
@@ -623,8 +623,12 @@ ApplicationWindow {
                 Cpp_JSON_Generator.setOperationMode(0)
                 Cpp_JSON_Generator.loadJsonMap(cleanPath, false)
             }
-
-            // Process CSV files
+            // ... or JS files
+            else if (cleanPath.endsWith(".js")) {
+                Cpp_JSON_Generator.setOperationMode(2)
+                Cpp_JSON_Generator.loadJsonMap(cleanPath, false)
+            }
+            // ... or CSV files
             else if (cleanPath.endsWith(".csv"))
                 Cpp_CSV_Player.openFile(cleanPath)
         }

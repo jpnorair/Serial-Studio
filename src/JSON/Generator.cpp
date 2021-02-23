@@ -122,10 +122,16 @@ Generator::OperationMode Generator::operationMode() const
 void Generator::loadJsonMap()
 {
     // clang-format off
+//    auto file = QFileDialog::getOpenFileName(Q_NULLPTR,
+//                                             tr("Select JSON map file"),
+//                                             QDir::homePath(),
+//                                             tr("JSON files") + " (*.json)");
+
     auto file = QFileDialog::getOpenFileName(Q_NULLPTR,
-                                             tr("Select JSON map file"),
+                                             tr("Select JSON map file or JS Script"),
                                              QDir::homePath(),
-                                             tr("JSON files") + " (*.json)");
+                                             tr("JSON or JS files") + " (*.json *.js)");
+
     // clang-format on
 
     if (!file.isEmpty())
@@ -212,6 +218,9 @@ void Generator::loadJsonMap(const QString &path, const bool silent)
  *
  * @c kAutomatic serial data contains the JSON data frame, good for simple
  *               applications or for prototyping.
+ *
+ * @c kScript Serial data is arbitrary apart from being new-line terminated.
+ *            A custom script (JS) will convert each line into JSON.
  */
 void Generator::setOperationMode(const OperationMode mode)
 {
@@ -348,7 +357,7 @@ void JSONWorker::process()
         document = QJsonDocument::fromJson(m_data, &error);
 
     // We need to use a map file, check if its loaded & replace values into map
-    else
+    else if (Generator::getInstance()->operationMode() == Generator::kManual)
     {
         // Initialize javscript engine
         m_engine = new QJSEngine(this);
@@ -435,6 +444,34 @@ void JSONWorker::process()
         document = QJsonDocument(root);
 
         // Delete javacript engine
+        m_engine->deleteLater();
+    }
+
+    // We need to use a custom script to parse the input
+    // Generator::getInstance()->operationMode() == Generator::kScript
+    ///@todo It would be nice to only uptake and compile the script once,
+    ///      then reuse the jsfn object on new input data.
+    else {
+        m_engine = new QJSEngine(this);
+
+        // Exit on Empty JS script
+        if (Generator::getInstance()->jsonMapData().isEmpty())
+            return;
+
+        // "jsfn" is a function created when the QJSEngine compiles the script text.
+        QJSValue jsfn = m_engine->evaluate(Generator::getInstance()->jsonMapData().toUtf8());
+        QJSValueList args;
+        args << QString::fromUtf8(m_data);
+        QJSValue result = jsfn.call(args);
+
+        if (result.isError()) {
+            error.error = QJsonParseError::MissingObject;
+        }
+        else {
+            error.error = QJsonParseError::NoError;
+            document = QJsonDocument::fromVariant(result.toVariant());
+        }
+
         m_engine->deleteLater();
     }
 

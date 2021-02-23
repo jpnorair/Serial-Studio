@@ -81,6 +81,7 @@ Control {
         function onOperationModeChanged() {
             commAuto.checked = (Cpp_JSON_Generator.operationMode == 1)
             commManual.checked = (Cpp_JSON_Generator.operationMode == 0)
+            commScript.checked = (Cpp_JSON_Generator.operationMode == 2)
         }
     }
 
@@ -102,22 +103,32 @@ Control {
         } RadioButton {
             id: commAuto
             checked: true
-            text: qsTr("Auto (JSON from serial device)")
+            text: qsTr("No Parsing (Input is JSON)")
             onCheckedChanged: {
                 if (checked)
                     Cpp_JSON_Generator.setOperationMode(1)
-                else
-                    Cpp_JSON_Generator.setOperationMode(0)
+                //else
+                //    Cpp_JSON_Generator.setOperationMode(0)
             }
         } RadioButton {
             id: commManual
             checked: false
-            text: qsTr("Manual (use JSON map file)")
+            text: qsTr("Parse via JSON map file (Manual Mode)")
             onCheckedChanged: {
                 if (checked)
                     Cpp_JSON_Generator.setOperationMode(0)
-                else
-                    Cpp_JSON_Generator.setOperationMode(1)
+                //else
+                //    Cpp_JSON_Generator.setOperationMode(1)
+            }
+        } RadioButton {
+            id: commScript
+            checked: false
+            text: qsTr("Parse via Custom Script")
+            onCheckedChanged: {
+                if (checked)
+                    Cpp_JSON_Generator.setOperationMode(2)
+                //else
+                //    Cpp_JSON_Generator.setOperationMode(0)
             }
         }
 
@@ -127,11 +138,27 @@ Control {
         Button {
             Layout.fillWidth: true
             opacity: enabled ? 1 : 0.5
-            enabled: commManual.checked
+            enabled: commManual.checked || commScript.checked
             onClicked: Cpp_JSON_Generator.loadJsonMap()
             Behavior on opacity {NumberAnimation{}}
-            text: (Cpp_JSON_Generator.jsonMapFilename.length ? qsTr("Change map file (%1)").arg(Cpp_JSON_Generator.jsonMapFilename) :
-                                                               qsTr("Select map file") + "...")
+            text: {
+                switch (Cpp_JSON_Generator.operationMode) {
+                // Manual Mode
+                default:
+                case 0: (Cpp_JSON_Generator.jsonMapFilename.length ?
+                            qsTr("Change map file (%1)").arg(Cpp_JSON_Generator.jsonMapFilename) :
+                            qsTr("Select map file") + "...")
+                    break
+                // Auto Mode
+                case 1: qsTr("Auto Mode (no file)")
+                    break
+                // Script Mode
+                case 2: (Cpp_JSON_Generator.jsonMapFilename.length ?
+                             qsTr("Change script file (%1)").arg(Cpp_JSON_Generator.jsonMapFilename) :
+                             qsTr("Select script file") + "...")
+                    break
+                }
+            }
         }
 
         //

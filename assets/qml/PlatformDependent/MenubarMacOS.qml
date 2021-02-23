@@ -32,7 +32,7 @@ MenuBar {
 
         MenuItem {
             shortcut: "ctrl+j"
-            text: qsTr("Select JSON file") + "..."
+            text: qsTr("Select Map or Script file") + "..."
             onTriggered: Cpp_JSON_Generator.loadJsonMap()
         }
 
@@ -121,14 +121,23 @@ MenuBar {
                 checkable: true
                 text: qsTr("Device sends JSON")
                 checked: Cpp_JSON_Generator.operationMode == 1
-                onTriggered: Cpp_JSON_Generator.operationMode = checked ? 1 : 0
+                //onTriggered: Cpp_JSON_Generator.operationMode = checked ? 1 : 0
+                onTriggered: Cpp_JSON_Generator.operationMode = 1
             }
 
             MenuItem {
                 checkable: true
                 text: qsTr("Load JSON from computer")
                 checked: Cpp_JSON_Generator.operationMode == 0
-                onTriggered: Cpp_JSON_Generator.operationMode = checked ? 0 : 1
+                //onTriggered: Cpp_JSON_Generator.operationMode = checked ? 0 : 1
+                onTriggered: Cpp_JSON_Generator.operationMode = 0
+            }
+
+            MenuItem {
+                checkable: true
+                text: qsTr("Load Script from computer")
+                checked: Cpp_JSON_Generator.operationMode == 2
+                onTriggered: Cpp_JSON_Generator.operationMode = 2
             }
         }
     }
