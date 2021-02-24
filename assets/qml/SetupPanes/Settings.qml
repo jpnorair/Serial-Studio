@@ -72,7 +72,7 @@ Control {
             } TextField {
                 id: _startSequence
                 Layout.fillWidth: true
-                placeholderText: "/*"
+                placeholderText: ""
                 text: "/*"
                 onTextChanged: {
                     if (text !== Cpp_IO_Manager.startSequence)
@@ -88,7 +88,7 @@ Control {
             } TextField {
                 id: _endSequence
                 Layout.fillWidth: true
-                placeholderText: "*/"
+                placeholderText: ""
                 text: "*/"
                 onTextChanged: {
                     if (text !== Cpp_IO_Manager.finishSequence)

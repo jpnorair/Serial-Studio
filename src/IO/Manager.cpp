@@ -423,7 +423,7 @@ void Manager::setStartSequence(const QString &sequence)
 {
     m_startSequence = ADD_ESCAPE_SEQUENCES(sequence);
     if (m_startSequence.isEmpty())
-        m_startSequence = "/*";
+        m_startSequence = "";
 
     emit startSequenceChanged();
 }
@@ -436,7 +436,7 @@ void Manager::setFinishSequence(const QString &sequence)
 {
     m_finishSequence = ADD_ESCAPE_SEQUENCES(sequence);
     if (m_finishSequence.isEmpty())
-        m_finishSequence = "/*";
+        m_finishSequence = "\r\n";
 
     emit finishSequenceChanged();
 }
@@ -466,14 +466,28 @@ void Manager::readFrames()
         return;
 
     // Read until start/finish combinations are not found
-    auto start = startSequence().toUtf8();
-    auto finish = finishSequence().toUtf8();
-    while (m_dataBuffer.contains(start) && m_dataBuffer.contains(finish))
+    ///@note asprintf is used to enable start/finish to contain escape sequences.
+    ///@todo Qt throws a lot of FUD at the code below, but I don't know another way within Qt
+    ///      to turn escape characters into real characters
+    auto start = QString::asprintf(qPrintable(startSequence())).toUtf8();
+    auto finish = QString::asprintf(qPrintable(finishSequence())).toUtf8();
+
+    // Read until start/finish combinations are not found
+    //auto start = startSequence().toUtf8();
+    //auto finish = finishSequence().toUtf8();
+
+    ///@todo make sure that start sequence can be zero length
+    while ( ((m_dataBuffer.length() == 0) || m_dataBuffer.contains(start)) \
+           && m_dataBuffer.contains(finish) )
     {
         // Begin reading from start sequence index
         auto buffer = m_dataBuffer;
-        auto sIndex = m_dataBuffer.indexOf(start);
-        buffer.remove(0, sIndex + start.length());
+        auto sIndex = 0;
+
+        if (m_dataBuffer.length() != 0)  {
+            sIndex = m_dataBuffer.indexOf(start);
+            buffer.remove(0, sIndex + start.length());
+        }
 
         // Check that new buffer contains finish sequence
         if (!buffer.contains(finish))
@@ -529,6 +543,7 @@ void Manager::onDataReceived()
     readFrames();
 
     // Update received bytes indicator
+    ///@todo probably a wise idea to enforce a buffer limitation smaller than UINT64_MAX...
     m_receivedBytes += bytes;
     if (m_receivedBytes >= UINT64_MAX)
         m_receivedBytes = 0;

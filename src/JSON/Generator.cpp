@@ -144,7 +144,7 @@ void Generator::loadJsonMap()
 void Generator::loadJsonMap(const QString &path, const bool silent)
 {
     // Log information
-    LOG_TRACE() << "Loading JSON file, silent flag set to" << silent;
+    LOG_TRACE() << "Loading JSON/JS file, silent flag set to" << silent;
 
     // Validate path
     if (path.isEmpty())
@@ -162,19 +162,30 @@ void Generator::loadJsonMap(const QString &path, const bool silent)
     if (m_jsonMap.open(QFile::ReadOnly))
     {
         // Read data & validate JSON from file
+        ///@todo handle JS document
         QJsonParseError error;
         auto data = m_jsonMap.readAll();
-        auto document = QJsonDocument::fromJson(data, &error);
-        if (error.error != QJsonParseError::NoError)
-        {
+
+        // Validate the JSON/JS
+        ///@todo there is no JS validation here, yet
+        if (Generator::getInstance()->operationMode() == Generator::kManual) {
+            auto document = QJsonDocument::fromJson(data, &error);
+            // Get rid of warnings
+            Q_UNUSED(document);
+        }
+        else {
+            error.error = QJsonParseError::NoError;
+        }
+
+        // Put up an alert box if there are errors in the JSON/JS
+        // If no errors, push the data forward
+        if (error.error != QJsonParseError::NoError) {
             LOG_TRACE() << "JSON parse error" << error.errorString();
 
             m_jsonMap.close();
             writeSettings("");
             Misc::Utilities::showMessageBox(tr("JSON parse error"), error.errorString());
         }
-
-        // JSON contains no errors, load data & save settings
         else
         {
             LOG_TRACE() << "JSON map loaded successfully";
@@ -186,9 +197,6 @@ void Generator::loadJsonMap(const QString &path, const bool silent)
                     tr("JSON map file loaded successfully!"),
                     tr("File \"%1\" loaded into memory").arg(jsonMapFilename()));
         }
-
-        // Get rid of warnings
-        Q_UNUSED(document);
     }
 
     // Open error
@@ -308,8 +316,9 @@ void Generator::readData(const QByteArray &data)
         return;
 
     // Data empty, abort
-    if (data.isEmpty())
+    if (data.isEmpty()) {
         return;
+    }
 
     // Increment received frames
     m_frameCount++;
@@ -453,7 +462,7 @@ void JSONWorker::process()
     ///      then reuse the jsfn object on new input data.
     else {
         m_engine = new QJSEngine(this);
-
+LOG_INFO() << "Data ingested:" << m_data;
         // Exit on Empty JS script
         if (Generator::getInstance()->jsonMapData().isEmpty())
             return;
@@ -465,11 +474,14 @@ void JSONWorker::process()
         QJSValue result = jsfn.call(args);
 
         if (result.isError()) {
+            //LOG_INFO() << "Script failed";
             error.error = QJsonParseError::MissingObject;
         }
         else {
-            error.error = QJsonParseError::NoError;
             document = QJsonDocument::fromVariant(result.toVariant());
+            error.error = QJsonParseError::NoError;
+            //LOG_INFO() << "Script succeeded";
+            LOG_INFO() << document.toJson();
         }
 
         m_engine->deleteLater();
