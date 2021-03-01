@@ -66,6 +66,11 @@ Control {
         property alias addressLookup: network.addressLookup
 
         //
+        // File settings
+        //
+        property alias path: file.path
+
+        //
         // App settings
         //
         property alias language: settings.language
@@ -232,6 +237,12 @@ Control {
             }
 
             TabButton {
+                text: qsTr("File")
+                height: tab.height + 3
+                width: implicitWidth + 2 * app.spacing
+            }
+
+            TabButton {
                 text: qsTr("Settings")
                 height: tab.height + 3
                 width: implicitWidth + 2 * app.spacing
@@ -265,6 +276,9 @@ Control {
                     stack.implicitHeight = network.implicitHeight
                     break
                 case 2:
+                    stack.implicitHeight = file.implicitHeight
+                    break
+                case 3:
                     stack.implicitHeight = settings.implicitHeight
                 }
             }
@@ -279,6 +293,14 @@ Control {
 
             SetupPanes.Network {
                 id: network
+                background: TextField {
+                    enabled: false
+                    palette.base: "#16232a"
+                }
+            }
+
+            SetupPanes.File {
+                id: file
                 background: TextField {
                     enabled: false
                     palette.base: "#16232a"

@@ -126,6 +126,7 @@ DISTFILES += \
     assets/qml/PlatformDependent/MenubarMacOS.qml \
     assets/qml/SetupPanes/Network.qml \
     assets/qml/SetupPanes/Serial.qml \
+    assets/qml/SetupPanes/File.qml \
     assets/qml/SetupPanes/Settings.qml \
     assets/qml/Widgets/*.qml \
     assets/qml/Windows/*.qml \
@@ -145,6 +146,7 @@ HEADERS += \
     src/IO/Console.h \
     src/IO/DataSources/Network.h \
     src/IO/DataSources/Serial.h \
+    src/IO/DataSources/File.h \
     src/IO/Manager.h \
     src/JSON/Dataset.h \
     src/JSON/Frame.h \
@@ -166,6 +168,7 @@ SOURCES += \
     src/IO/Console.cpp \
     src/IO/DataSources/Network.cpp \
     src/IO/DataSources/Serial.cpp \
+    src/IO/DataSources/File.cpp \
     src/IO/Manager.cpp \
     src/JSON/Dataset.cpp \
     src/JSON/Frame.cpp \

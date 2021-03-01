@@ -87,6 +87,7 @@
         <file>qml/Widgets/SimpleDial.qml</file>
         <file>qml/SetupPanes/Network.qml</file>
         <file>qml/SetupPanes/Serial.qml</file>
+        <file>qml/SetupPanes/File.qml</file>
         <file>qml/SetupPanes/Settings.qml</file>
         <file>icons/search.svg</file>
         <file>qml/PlatformDependent/MenubarMacOS.qml</file>

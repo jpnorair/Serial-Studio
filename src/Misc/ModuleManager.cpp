@@ -42,6 +42,7 @@
 #include <IO/Console.h>
 #include <IO/DataSources/Serial.h>
 #include <IO/DataSources/Network.h>
+#include <IO/DataSources/File.h>
 
 #include <Misc/Utilities.h>
 #include <Misc/Translator.h>
@@ -146,6 +147,7 @@ void ModuleManager::initializeQmlInterface()
     auto ioConsole = IO::Console::getInstance();
     auto ioSerial = IO::DataSources::Serial::getInstance();
     auto ioNetwork = IO::DataSources::Network::getInstance();
+    auto ioFile = IO::DataSources::File::getInstance();
     auto jsonGenerator = JSON::Generator::getInstance();
     auto utilities = Misc::Utilities::getInstance();
     LOG_INFO() << "Finished initializing C++ modules";
@@ -168,6 +170,7 @@ void ModuleManager::initializeQmlInterface()
     c->setContextProperty("Cpp_IO_Console", ioConsole);
     c->setContextProperty("Cpp_IO_Manager", ioManager);
     c->setContextProperty("Cpp_IO_Serial", ioSerial);
+    c->setContextProperty("Cpp_IO_File", ioFile);
     c->setContextProperty("Cpp_IO_Network", ioNetwork);
     c->setContextProperty("Cpp_JSON_Generator", jsonGenerator);
 
