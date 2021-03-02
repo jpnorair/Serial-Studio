@@ -101,6 +101,9 @@ public:
     QString jsonMapFilepath() const;
     OperationMode operationMode() const;
 
+    ///@note moved from a private slot.  There was only one user and it needed blocking.
+    //void readData(const QByteArray &data);
+
 public slots:
     void loadJsonMap();
     void setOperationMode(const OperationMode mode);
@@ -117,6 +120,8 @@ public slots:
 
 private slots:
     void reset();
+
+    ///@note moving this to a public function that manager can call
     void readData(const QByteArray &data);
 
 private:

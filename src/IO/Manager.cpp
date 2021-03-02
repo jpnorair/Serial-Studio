@@ -140,16 +140,13 @@ bool Manager::deviceAvailable()
 bool Manager::configurationOk() const
 {
     if (dataSource() == DataSource::Serial) {
-        //LOG_INFO() << "DataSource is Serial";
         return DataSources::Serial::getInstance()->configurationOk();
     }
     else if (dataSource() == DataSource::Network) {
-        //LOG_INFO() << "DataSource is Network";
         return DataSources::Network::getInstance()->configurationOk();
     }
     else if (dataSource() == DataSource::File) {
         bool rc = DataSources::File::getInstance()->configurationOk();
-        LOG_INFO() << "File DataSource check is: " << rc;
         return rc;
     }
 
@@ -503,34 +500,35 @@ void Manager::readFrames()
     //auto start = startSequence().toUtf8();
     //auto finish = finishSequence().toUtf8();
 
-    ///@todo make sure that start sequence can be zero length
-    while ( ((m_dataBuffer.length() == 0) || m_dataBuffer.contains(start)) \
-           && m_dataBuffer.contains(finish) )
+    auto cursor = m_dataBuffer;
+    auto bytes = 0;
+
+    while ( ((start.length() == 0) || cursor.contains(start)) \
+          && cursor.contains(finish) )
     {
-        // Begin reading from start sequence index
-        auto buffer = m_dataBuffer;
+        // Remove the part of the buffer prior to, and including, the start sequence.
         auto sIndex = 0;
-
-        if (m_dataBuffer.length() != 0)  {
-            sIndex = m_dataBuffer.indexOf(start);
-            buffer.remove(0, sIndex + start.length());
+        if (start.length() != 0)  {
+            sIndex = cursor.indexOf(start);
+            cursor = cursor.mid(sIndex, -1);
+            bytes += sIndex;
         }
 
-        // Check that new buffer contains finish sequence
-        if (!buffer.contains(finish))
-            break;
-
-        // Remove bytes outside start/end sequence range
-        auto fIndex = buffer.indexOf(finish);
-        buffer.remove(fIndex, buffer.length() - fIndex);
-
-        // Buffer is not empty, notify app & remove read data from buffer
-        if (!buffer.isEmpty())
-        {
+        // Copy a sub-buffer that goes until the finish sequence, and emit it
+        auto fIndex = cursor.indexOf(finish);
+        auto buffer = cursor.left(fIndex);
+        if (!buffer.isEmpty()) {
             emit frameReceived(buffer);
-            m_dataBuffer.remove(0, sIndex + fIndex + finish.length());
+            ///@note might be best to simply call the function that receives the emit above
         }
+
+        // Remove the data including the finish sequence, from the master buffer
+        cursor = cursor.mid(fIndex + finish.length(), -1);
+        bytes += fIndex + finish.length();
     }
+
+    if (bytes > 0)
+        m_dataBuffer.remove(0, bytes);
 
     // Clear temp. buffer (e.g. device sends a lot of invalid data)
     if (m_dataBuffer.size() > maxBufferSize())

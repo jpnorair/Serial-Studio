@@ -55,7 +55,10 @@ Generator::Generator()
     auto cp = CSV::Player::getInstance();
     connect(cp, SIGNAL(openChanged()), this, SLOT(reset()));
     connect(io, SIGNAL(deviceChanged()), this, SLOT(reset()));
+
+    ///@note can't put this in a worker thread, it needs to be blocking
     connect(io, SIGNAL(frameReceived(QByteArray)), this, SLOT(readData(QByteArray)));
+
     m_workerThread.start();
 
     LOG_TRACE() << "Class initialized";
@@ -322,6 +325,7 @@ void Generator::readData(const QByteArray &data)
 
     // Increment received frames
     m_frameCount++;
+    //LOG_INFO() << "Frame Count:" << m_frameCount;
 
     // Create new worker thread to read JSON data
     QThread *thread = new QThread;
@@ -462,7 +466,7 @@ void JSONWorker::process()
     ///      then reuse the jsfn object on new input data.
     else {
         m_engine = new QJSEngine(this);
-LOG_INFO() << "Data ingested:" << m_data;
+        //LOG_INFO() << "Data ingested:" << m_data;
         // Exit on Empty JS script
         if (Generator::getInstance()->jsonMapData().isEmpty())
             return;
@@ -481,7 +485,7 @@ LOG_INFO() << "Data ingested:" << m_data;
             document = QJsonDocument::fromVariant(result.toVariant());
             error.error = QJsonParseError::NoError;
             //LOG_INFO() << "Script succeeded";
-            LOG_INFO() << document.toJson();
+            LOG_INFO() << document.toJson().simplified();
         }
 
         m_engine->deleteLater();
