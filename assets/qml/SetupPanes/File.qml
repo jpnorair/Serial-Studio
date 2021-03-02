@@ -51,7 +51,7 @@ Control {
             columnSpacing: app.spacing
 
             //
-            // Start sequence
+            // File Path
             //
             Label {
                 opacity: enabled ? 1 : 0.5
@@ -62,7 +62,7 @@ Control {
                 id: _filePath
                 Layout.fillWidth: true
                 placeholderText: ""
-                text: ""
+                text: Cpp_IO_File.path
                 onTextChanged: {
                     if (text !== Cpp_IO_File.path)
                         Cpp_IO_File.path = text
@@ -72,8 +72,6 @@ Control {
                 enabled: !Cpp_IO_Manager.connected
                 Behavior on opacity {NumberAnimation{}}
             }
-
-
         }
 
         //

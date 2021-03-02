@@ -13,6 +13,8 @@
 #include <QHostInfo>
 #include <QByteArray>
 
+#include <QFile>
+
 namespace IO
 {
 namespace DataSources
@@ -38,11 +40,13 @@ public:
 
     QString path() const;
     static QString defaultPath() { return "log.txt"; }
+    bool configurationOk() const;
 
-    //QIODevice *openNetworkPort();
+    QIODevice *openFilePath();
 
 public slots:
     void setPath(const QString &path);
+    void disconnectDevice();
 
 private slots:
     //void onErrorOccurred(const QAbstractSocket::SocketError socketError);
@@ -53,6 +57,8 @@ private:
 
 private:
     QString m_path;
+    QFile *m_file;
+
 
 };
 }

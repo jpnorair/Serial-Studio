@@ -25,6 +25,7 @@
 #include <Logger.h>
 #include <IO/DataSources/Serial.h>
 #include <IO/DataSources/Network.h>
+#include <IO/DataSources/File.h>
 
 using namespace IO;
 
@@ -74,10 +75,12 @@ Manager::Manager()
     // Configure signals/slots
     auto serial = DataSources::Serial::getInstance();
     auto netwrk = DataSources::Network::getInstance();
+    auto file   = DataSources::File::getInstance();
     connect(netwrk, SIGNAL(hostChanged()), this, SIGNAL(configurationChanged()));
     connect(netwrk, SIGNAL(portChanged()), this, SIGNAL(configurationChanged()));
     connect(this, SIGNAL(dataSourceChanged()), this, SIGNAL(configurationChanged()));
     connect(serial, SIGNAL(portIndexChanged()), this, SIGNAL(configurationChanged()));
+    connect(file, SIGNAL(pathChanged()), this, SIGNAL(configurationChanged()));
 }
 
 /**
@@ -136,10 +139,19 @@ bool Manager::deviceAvailable()
  */
 bool Manager::configurationOk() const
 {
-    if (dataSource() == DataSource::Serial)
+    if (dataSource() == DataSource::Serial) {
+        //LOG_INFO() << "DataSource is Serial";
         return DataSources::Serial::getInstance()->configurationOk();
-    else if (dataSource() == DataSource::Network)
+    }
+    else if (dataSource() == DataSource::Network) {
+        //LOG_INFO() << "DataSource is Network";
         return DataSources::Network::getInstance()->configurationOk();
+    }
+    else if (dataSource() == DataSource::File) {
+        bool rc = DataSources::File::getInstance()->configurationOk();
+        LOG_INFO() << "File DataSource check is: " << rc;
+        return rc;
+    }
 
     return false;
 }
@@ -194,6 +206,7 @@ QIODevice *Manager::device()
  * Returns the currently selected data source, possible return values:
  * - @c DataSource::Serial  use a serial port as a data source
  * - @c DataSource::Network use a network port as a data source
+ * - @c DataSource::File    use a file or named-pipe as a data source
  */
 Manager::DataSource Manager::dataSource() const
 {
@@ -260,6 +273,7 @@ QStringList Manager::dataSourcesList() const
     QStringList list;
     list.append(tr("Serial port"));
     list.append(tr("Network port"));
+    list.append(tr("File path"));
     return list;
 }
 
@@ -319,19 +333,30 @@ void Manager::connectDevice()
     else if (dataSource() == DataSource::Network)
         setDevice(DataSources::Network::getInstance()->openNetworkPort());
 
+    // Try to open a file
+    else if (dataSource() == DataSource::File)
+        setDevice(DataSources::File::getInstance()->openFilePath());
+
+
     // Configure current device
     if (deviceAvailable())
     {
         // Set open flag
         QIODevice::OpenMode mode = QIODevice::ReadOnly;
-        if (m_writeEnabled)
+        if (m_writeEnabled) {
             mode = QIODevice::ReadWrite;
+        }
 
         // Open device
         if (device()->open(mode))
         {
             connect(device(), &QIODevice::readyRead, this, &Manager::onDataReceived);
-            LOG_INFO() << "Device opened successfully";
+
+            ///@todo try to find a way in Qt to identify if a file is a plain file
+            ///      or a named pipe.
+            if (dataSource() == DataSource::File) {
+                onDataReceived();
+            }
         }
 
         // Error opening the device
@@ -361,6 +386,8 @@ void Manager::disconnectDevice()
             DataSources::Serial::getInstance()->disconnectDevice();
         else if (dataSource() == DataSource::Network)
             DataSources::Network::getInstance()->disconnectDevice();
+        else if (dataSource() == DataSource::File)
+            DataSources::File::getInstance()->disconnectDevice();
 
         // Update device pointer
         m_device = nullptr;

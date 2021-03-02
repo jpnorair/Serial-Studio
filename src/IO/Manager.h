@@ -88,7 +88,8 @@ public:
     enum class DataSource
     {
         Serial,
-        Network
+        Network,
+        File
     };
     Q_ENUM(DataSource)
 

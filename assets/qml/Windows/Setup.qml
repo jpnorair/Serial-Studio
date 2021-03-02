@@ -220,7 +220,7 @@ Control {
             id: tab
             Layout.fillWidth: true
             onCurrentIndexChanged: {
-                if (currentIndex < 2 && currentIndex !== Cpp_IO_Manager.dataSource)
+                if (currentIndex < 3 && currentIndex !== Cpp_IO_Manager.dataSource)
                     Cpp_IO_Manager.dataSource = currentIndex
             }
 

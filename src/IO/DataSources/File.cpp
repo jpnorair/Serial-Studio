@@ -22,8 +22,11 @@
 
 #include "File.h"
 
+#include <Logger.h>
+
 #include <IO/Manager.h>
 #include <Misc/Utilities.h>
+#include <QFile>
 
 using namespace IO::DataSources;
 static File *INSTANCE = nullptr;
@@ -32,10 +35,9 @@ static File *INSTANCE = nullptr;
  * Constructor function
  */
 File::File()
+    : m_file(nullptr)
 {
     setPath(defaultPath());
-    //connect(&m_tcpSocket, &QTcpSocket::errorOccurred, this, &Network::onErrorOccurred);
-    //connect(&m_udpSocket, &QTcpSocket::errorOccurred, this, &Network::onErrorOccurred);
 }
 
 /**
@@ -43,7 +45,7 @@ File::File()
  */
 File::~File()
 {
-    //disconnectDevice();
+    disconnectDevice();
 }
 
 /**
@@ -74,11 +76,44 @@ void File::setPath(const QString &path)
 
 
 /**
- * Returns @c true if the port is greater than 0 and the host address is valid.
+ * Disconnects the File (i.e. closes it)
  */
-//bool Network::configurationOk() const
-//{
-//    return port() > 0 && !QHostAddress(host()).isNull();
-//}
+void File::disconnectDevice()
+{
+    if (m_file != nullptr) {
+        m_file->close();
+        m_file->deleteLater();
+        LOG_INFO() << "Closed" << path();
+    }
 
+    m_file = nullptr;
+    ///@todo emit a signal here?
+}
+
+
+/**
+ * Returns @c true if the file is valid
+ */
+bool File::configurationOk() const
+{
+    return (path().length() > 0) && QFile::exists(path());
+}
+
+
+/**
+ * Attempts to make a connection to the file or named pipe
+ */
+QIODevice *File::openFilePath()
+{
+    // Disconnect all sockets
+    disconnectDevice();
+
+    auto new_path = path();
+    if (new_path.isEmpty())
+        new_path = defaultPath();
+
+    m_file = new QFile(new_path);
+
+    return m_file;
+}
 
