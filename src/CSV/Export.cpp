@@ -186,6 +186,9 @@ void Export::writeValues()
                 auto datasetUnits = dataset.value("u").toVariant().toString();
                 auto datasetValue = dataset.value("v").toVariant().toString();
 
+                ///@todo integrate time into table plotting
+                //auto datasetTime  = dataset.value("x").toVariant().toDouble();
+
                 datasetTitle = datasetTitle.replace("\n", "");
                 datasetUnits = datasetUnits.replace("\n", "");
                 datasetValue = datasetValue.replace("\n", "");

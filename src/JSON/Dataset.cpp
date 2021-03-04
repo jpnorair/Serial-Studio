@@ -30,6 +30,7 @@ Dataset::Dataset(QObject *parent)
     , m_graph(false)
     , m_title("")
     , m_value("")
+    , m_tick("")
     , m_units("")
     , m_widget("")
 {
@@ -57,6 +58,14 @@ QString Dataset::title() const
 QString Dataset::value() const
 {
     return m_value;
+}
+
+/**
+ * @return The time value of this dataset
+ */
+QString Dataset::tick() const
+{
+    return m_tick;
 }
 
 /**
@@ -98,6 +107,7 @@ bool Dataset::read(const QJsonObject &object)
         auto graph = object.value("g").toVariant().toBool();
         auto title = object.value("t").toVariant().toString();
         auto value = object.value("v").toVariant().toString();
+        auto tick = object.value("x").toVariant().toString();
         auto units = object.value("u").toVariant().toString();
         auto widget = object.value("w").toVariant().toString();
 
@@ -105,6 +115,8 @@ bool Dataset::read(const QJsonObject &object)
         title = title.replace("\r", "");
         value = value.replace("\n", "");
         value = value.replace("\r", "");
+        tick = value.replace("\n", "");
+        tick = value.replace("\r", "");
         units = units.replace("\n", "");
         units = units.replace("\r", "");
         widget = widget.replace("\n", "");
@@ -116,6 +128,7 @@ bool Dataset::read(const QJsonObject &object)
             m_title = title;
             m_units = units;
             m_value = value;
+            m_tick = tick;
             m_widget = widget;
             m_jsonData = object;
 

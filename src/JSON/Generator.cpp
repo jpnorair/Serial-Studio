@@ -46,9 +46,11 @@ static const QRegExp UNMATCHED_VALUES_REGEX("(%\b([0-9]|[1-9][0-9])\b)");
 
 /**
  * Initializes the JSON Parser class and connects appropiate SIGNALS/SLOTS
+ * @todo implement destructor to delete m_template
  */
 Generator::Generator()
-    : m_frameCount(0)
+    : m_template(nullptr)
+    , m_frameCount(0)
     , m_opMode(kAutomatic)
 {
     auto io = IO::Manager::getInstance();
@@ -296,6 +298,10 @@ void Generator::loadJSON(const QJsonDocument &json)
 void Generator::reset()
 {
     m_frameCount = 0;
+    if (m_template != nullptr) {
+        delete m_template;
+        m_template = nullptr;
+    }
     emit jsonChanged(JFI_Empty());
 }
 
@@ -346,6 +352,8 @@ void Generator::readData(const QByteArray &data)
 /**
  * Constructor function, stores received frame data & the date/time that the frame data
  * was received.
+ *
+ * @todo write destructor to clear m_template
  */
 JSONWorker::JSONWorker(const QByteArray &data, const quint64 frame, const QDateTime &time)
     : m_time(time)
@@ -475,25 +483,115 @@ void JSONWorker::process()
         QJSValue jsfn = m_engine->evaluate(Generator::getInstance()->jsonMapData().toUtf8());
         QJSValueList args;
         args << QString::fromUtf8(m_data);
-        QJSValue result = jsfn.call(args);
+        QJSValue result;
+
+        // If the data template is empty, get the template by passing-in an empty string.
+        // Get the data template by passing-in an empty string
+        if (Generator::getInstance()->m_template == nullptr) {
+            QJSValueList tmpl_args;
+            tmpl_args << QString::fromUtf8("");
+            result = jsfn.call(tmpl_args);
+            if ((result.isError() == false) && (result.isObject() == true)) {
+                Generator::getInstance()->m_template = new QJsonObject(result.toVariant().toJsonObject());
+            }
+            else {
+                Generator::getInstance()->m_template = new QJsonObject();
+            }
+        }
+
+        result = jsfn.call(args);
 
         if (result.isError()) {
             //LOG_INFO() << "Script failed";
             error.error = QJsonParseError::MissingObject;
         }
         else {
-            document = QJsonDocument::fromVariant(result.toVariant());
-            error.error = QJsonParseError::NoError;
-            //LOG_INFO() << "Script succeeded";
-            LOG_INFO() << document.toJson().simplified();
+            // Default error if no matching data: missing object
+            error.error = QJsonParseError::MissingObject;
+
+            // There are two options
+            // 1. use the template, which accepts input as partial dataset
+            // 2. don't use a template, thus input must contain the entire dataset
+
+            // Overlay new values into the template.
+            // This is a deep loop that matches the input data hierachy against the template data hierarchy.
+            // Where there is overlay, the data values are written to the template.
+            // If there is any success, the updated template is converted to output document.
+            if (!Generator::getInstance()->m_template->isEmpty()) {
+                bool change_made = false;
+                QJsonObject* tmpl = Generator::getInstance()->m_template;
+                QJsonObject data = QJsonObject(result.toVariant().toJsonObject());
+
+                // Make sure top-level data formats are matching
+                if (QString::compare(data["t"].toString(), (*tmpl)["t"].toString()) == 0) {
+                    if (data["g"].isArray() && (*tmpl)["g"].isArray()) {
+                        for (auto tg = (*tmpl)["g"].toArray().begin(); tg != (*tmpl)["g"].toArray().end(); ++tg) {
+                            if (!tg->isObject()) continue;
+                            if (!tg->toObject().contains("d")) continue;
+                            if (!tg->toObject()["d"].isArray()) continue;
+
+                            for (auto dg = data["g"].toArray().begin(); dg != data["g"].toArray().end(); ++dg) {
+                                if (!dg->isObject()) continue;
+                                if (!dg->toObject().contains("d")) continue;
+                                if (!dg->toObject()["d"].isArray()) continue;
+
+                                // Make sure group types are matching
+                                if (QString::compare(dg->toObject()["t"].toString(), tg->toObject()["t"].toString()) != 0)
+                                    continue;
+
+                                for (auto tgd = tg->toObject()["d"].toArray().begin(); tgd != tg->toObject()["d"].toArray().end(); ++tgd ) {
+                                    if (!tgd->isObject()) continue;
+                                    if (!(tgd->toObject().contains("t") && tgd->toObject().contains("v"))) continue;
+
+                                    for (auto dgd = dg->toObject()["d"].toArray().begin(); dgd != dg->toObject()["d"].toArray().end(); ++dgd ) {
+                                        if (!dgd->isObject()) continue;
+                                        if (!(dgd->toObject().contains("t") && dgd->toObject().contains("v"))) continue;
+
+                                        // Make sure data item types are matching
+                                        if (QString::compare(dgd->toObject()["t"].toString(), tgd->toObject()["t"].toString()) != 0)
+                                            continue;
+
+                                        // Finally! Copy data from input to template
+                                        tgd->toObject()["v"] = dgd->toObject()["v"];
+
+                                        // If data contains the optional x (time) parameter, copy that too
+                                        if (tgd->toObject().contains("x") && dgd->toObject().contains("x")) {
+                                            if (dgd->toObject()["x"].isDouble()) {
+                                                tgd->toObject()["x"] = dgd->toObject()["x"];
+                                            }
+                                        }
+
+                                        // Need to flag that a change was made in order for document to be outputted
+                                        change_made = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (change_made) {
+                        document = QJsonDocument(*tmpl);
+                    }
+                }
+            }
+
+            // Do not use a template, just package the object generated by the script
+            else {
+                document = QJsonDocument::fromVariant(result.toVariant());
+            }
+
+            if (!document.isEmpty()) {
+                LOG_INFO() << document.toJson().simplified();
+                error.error = QJsonParseError::NoError;
+            }
         }
 
         m_engine->deleteLater();
     }
 
     // No parse error, update UI & reset error counter
-    if (error.error == QJsonParseError::NoError)
+    if (error.error == QJsonParseError::NoError) {
         emit jsonReady(JFI_CreateNew(m_frame, m_time, document));
+    }
 
     // Delete object in 500 ms
     QTimer::singleShot(500, this, SIGNAL(finished()));

@@ -42,6 +42,9 @@ class Dataset : public QObject
     Q_PROPERTY(QString value
                READ value
                CONSTANT)
+    Q_PROPERTY(QString tick
+               READ tick
+               CONSTANT)
     Q_PROPERTY(QString units
                READ units
                CONSTANT)
@@ -59,6 +62,7 @@ public:
     bool graph() const;
     QString title() const;
     QString value() const;
+    QString tick() const;
     QString units() const;
     QString widget() const;
     QJsonObject jsonData() const;
@@ -69,6 +73,7 @@ private:
     bool m_graph;
     QString m_title;
     QString m_value;
+    QString m_tick;
     QString m_units;
     QString m_widget;
     QJsonObject m_jsonData;

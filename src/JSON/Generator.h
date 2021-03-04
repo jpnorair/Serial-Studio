@@ -93,6 +93,9 @@ public:
     };
     Q_ENUMS(OperationMode)
 
+    ///@note added for templating of the input JSON
+    QJsonObject *m_template;
+
 public:
     static Generator *getInstance();
 
@@ -100,9 +103,6 @@ public:
     QString jsonMapFilename() const;
     QString jsonMapFilepath() const;
     OperationMode operationMode() const;
-
-    ///@note moved from a private slot.  There was only one user and it needed blocking.
-    //void readData(const QByteArray &data);
 
 public slots:
     void loadJsonMap();

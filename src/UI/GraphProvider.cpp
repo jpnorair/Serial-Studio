@@ -130,6 +130,14 @@ double GraphProvider::getValue(const int index) const
     return 0;
 }
 
+double GraphProvider::getTick(const int index) const
+{
+    if (index < graphCount() && index >= 0)
+        return getDataset(index)->tick().toDouble();
+
+    return 0;
+}
+
 /**
  * Returns a point object with the recommended min/max values for the graph at the
  * given @a index
@@ -235,6 +243,7 @@ void GraphProvider::setDisplayedPoints(const int points)
 void GraphProvider::resetData()
 {
     m_points.clear();
+    m_currentTime.clear();
     m_datasets.clear();
     m_maximumValues.clear();
     m_minimumValues.clear();
@@ -281,29 +290,39 @@ void GraphProvider::drawGraphs()
                 auto vector = new QVector<double>;
                 m_points.append(vector);
             }
+            if (m_currentTime.count() < (i+1)) {
+                m_currentTime.append(0.0);
+            }
 
-            // Register min. values list
-            if (m_minimumValues.count() < (i + 1))
-                m_minimumValues.append(getValue(i));
+            // Only handle the new point data if it is ahead in time from the last data.
+            // The exception is if Time < 0, which indicates explicit timing is not used.
+            double tick = getTick(i);
+            if ((m_currentTime.at(i) < tick) || (tick == 0.0) ) {
+                m_currentTime.replace(i, tick);
 
-            // Register max. values list
-            if (m_maximumValues.count() < (i + 1))
-                m_maximumValues.append(getValue(i));
+                // Register min. values list
+                if (m_minimumValues.count() < (i + 1))
+                    m_minimumValues.append(getValue(i));
 
-            // Update minimum value
-            if (minimumValue(i) > getValue(i))
-                m_minimumValues.replace(i, getValue(i));
+                // Register max. values list
+                if (m_maximumValues.count() < (i + 1))
+                    m_maximumValues.append(getValue(i));
 
-            // Update minimum value
-            if (maximumValue(i) < getValue(i))
-                m_maximumValues.replace(i, getValue(i));
+                // Update minimum value
+                if (minimumValue(i) > getValue(i))
+                    m_minimumValues.replace(i, getValue(i));
 
-            // Remove older items
-            if (m_points.at(i)->count() >= displayedPoints())
-                m_points.at(i)->remove(0, m_points.at(i)->count() - displayedPoints());
+                // Update minimum value
+                if (maximumValue(i) < getValue(i))
+                    m_maximumValues.replace(i, getValue(i));
 
-            // Add values
-            m_points.at(i)->append(getValue(i));
+                // Remove older items
+                if (m_points.at(i)->count() >= displayedPoints())
+                    m_points.at(i)->remove(0, m_points.at(i)->count() - displayedPoints());
+
+                // Add values
+                m_points.at(i)->append(getValue(i));
+            }
         }
     }
 

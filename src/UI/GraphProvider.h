@@ -64,6 +64,7 @@ public:
     int displayedPoints() const;
     QVector<JSON::Dataset *> datasets() const;
 
+    Q_INVOKABLE double getTick(const int index) const;
     Q_INVOKABLE double getValue(const int index) const;
     Q_INVOKABLE QPointF graphRange(const int index) const;
     Q_INVOKABLE double minimumValue(const int index) const;
@@ -89,6 +90,7 @@ private:
     QVector<double> m_maximumValues;
     QVector<double> m_minimumValues;
     QVector<QVector<double> *> m_points;
+    QVector<double> m_currentTime;
     QVector<JSON::Dataset *> m_datasets;
     QList<JFI_Object> m_jsonList;
 };
