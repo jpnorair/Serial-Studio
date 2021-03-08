@@ -49,8 +49,8 @@ static const QRegExp UNMATCHED_VALUES_REGEX("(%\b([0-9]|[1-9][0-9])\b)");
  * @todo implement destructor to delete m_template
  */
 Generator::Generator()
-    : m_template(nullptr)
-    , m_frameCount(0)
+    : m_frameCount(0)
+    , m_jsonTemplateMutex(QMutex::NonRecursive)
     , m_opMode(kAutomatic)
 {
     auto io = IO::Manager::getInstance();
@@ -99,6 +99,20 @@ QString Generator::jsonMapFilename() const
     return "";
 }
 
+QJsonObject Generator::openJsonTemplate() {
+    m_jsonTemplateMutex.lock();
+    return m_jsonTemplate;
+}
+
+void Generator::closeJsonTemplate() {
+    m_jsonTemplateMutex.unlock();
+}
+
+void Generator::saveJsonTemplate(QJsonObject &tmpl) {
+    ///Do Mutex
+    m_jsonTemplate = tmpl;
+}
+
 /**
  * Returns the file path of the loaded JSON map file
  */
@@ -137,10 +151,24 @@ void Generator::loadJsonMap()
                                              QDir::homePath(),
                                              tr("JSON or JS files") + " (*.json *.js)");
 
-    // clang-format on
 
-    if (!file.isEmpty())
+    if (!file.isEmpty()) {
         loadJsonMap(file);
+
+        // If the data template is empty, get the template by passing-in an empty string.
+        // Get the data template by passing-in an empty string
+
+        QJSEngine engine_tmpl;
+        QJSValue result_tmpl;
+        QJSValue js_tmpl = engine_tmpl.evaluate(Generator::getInstance()->jsonMapData().toUtf8());
+        QJSValueList tmpl_args;
+        tmpl_args << QString::fromUtf8("");
+        result_tmpl = js_tmpl.call(tmpl_args);
+
+        if ((result_tmpl.isError() == false) && (result_tmpl.isObject() == true)) {
+            m_jsonTemplate = QJsonObject(result_tmpl.toVariant().toJsonObject());
+        }
+    }
 }
 
 /**
@@ -298,10 +326,6 @@ void Generator::loadJSON(const QJsonDocument &json)
 void Generator::reset()
 {
     m_frameCount = 0;
-    if (m_template != nullptr) {
-        delete m_template;
-        m_template = nullptr;
-    }
     emit jsonChanged(JFI_Empty());
 }
 
@@ -352,8 +376,6 @@ void Generator::readData(const QByteArray &data)
 /**
  * Constructor function, stores received frame data & the date/time that the frame data
  * was received.
- *
- * @todo write destructor to clear m_template
  */
 JSONWorker::JSONWorker(const QByteArray &data, const quint64 frame, const QDateTime &time)
     : m_time(time)
@@ -473,32 +495,20 @@ void JSONWorker::process()
     ///@todo It would be nice to only uptake and compile the script once,
     ///      then reuse the jsfn object on new input data.
     else {
-        m_engine = new QJSEngine(this);
         //LOG_INFO() << "Data ingested:" << m_data;
         // Exit on Empty JS script
         if (Generator::getInstance()->jsonMapData().isEmpty())
             return;
 
+        // Call the script again on real data
+        m_engine = new QJSEngine(this);
+
         // "jsfn" is a function created when the QJSEngine compiles the script text.
         QJSValue jsfn = m_engine->evaluate(Generator::getInstance()->jsonMapData().toUtf8());
-        QJSValueList args;
-        args << QString::fromUtf8(m_data);
         QJSValue result;
 
-        // If the data template is empty, get the template by passing-in an empty string.
-        // Get the data template by passing-in an empty string
-        if (Generator::getInstance()->m_template == nullptr) {
-            QJSValueList tmpl_args;
-            tmpl_args << QString::fromUtf8("");
-            result = jsfn.call(tmpl_args);
-            if ((result.isError() == false) && (result.isObject() == true)) {
-                Generator::getInstance()->m_template = new QJsonObject(result.toVariant().toJsonObject());
-            }
-            else {
-                Generator::getInstance()->m_template = new QJsonObject();
-            }
-        }
-
+        QJSValueList args;
+        args << QString::fromUtf8(m_data);
         result = jsfn.call(args);
 
         if (result.isError()) {
@@ -512,25 +522,37 @@ void JSONWorker::process()
             // There are two options
             // 1. use the template, which accepts input as partial dataset
             // 2. don't use a template, thus input must contain the entire dataset
+            //LOG_INFO() << document.toJson().simplified();
 
             // Overlay new values into the template.
             // This is a deep loop that matches the input data hierachy against the template data hierarchy.
             // Where there is overlay, the data values are written to the template.
             // If there is any success, the updated template is converted to output document.
-            if (!Generator::getInstance()->m_template->isEmpty()) {
+            QJsonObject tmpl = Generator::getInstance()->openJsonTemplate();
+            //LOG_INFO() << "tmpl" << tmpl;
+
+            if (!tmpl.isEmpty()) {
                 bool change_made = false;
-                QJsonObject* tmpl = Generator::getInstance()->m_template;
                 QJsonObject data = QJsonObject(result.toVariant().toJsonObject());
 
                 // Make sure top-level data formats are matching
-                if (QString::compare(data["t"].toString(), (*tmpl)["t"].toString()) == 0) {
-                    if (data["g"].isArray() && (*tmpl)["g"].isArray()) {
-                        for (auto tg = (*tmpl)["g"].toArray().begin(); tg != (*tmpl)["g"].toArray().end(); ++tg) {
+                if (QString::compare(data["t"].toString(), tmpl["t"].toString()) == 0) {
+                    //LOG_INFO() << "data[t]" << data["t"].toString();
+
+                    if (data["g"].isArray() && tmpl["g"].isArray()) {
+                        QJsonArray t_groups = tmpl["g"].toArray();
+                        QJsonArray d_groups = data["g"].toArray();
+                        QJsonArray::iterator tg;
+                        QJsonArray::iterator dg;
+                        //LOG_INFO() << "data[g]" << d_groups;
+                        //LOG_INFO() << "tmpl[g]" << t_groups;
+
+                        for (tg = t_groups.begin(); tg != t_groups.end(); ++tg) {
                             if (!tg->isObject()) continue;
                             if (!tg->toObject().contains("d")) continue;
                             if (!tg->toObject()["d"].isArray()) continue;
 
-                            for (auto dg = data["g"].toArray().begin(); dg != data["g"].toArray().end(); ++dg) {
+                            for (dg = d_groups.begin(); dg != d_groups.end(); ++dg) {
                                 if (!dg->isObject()) continue;
                                 if (!dg->toObject().contains("d")) continue;
                                 if (!dg->toObject()["d"].isArray()) continue;
@@ -539,11 +561,15 @@ void JSONWorker::process()
                                 if (QString::compare(dg->toObject()["t"].toString(), tg->toObject()["t"].toString()) != 0)
                                     continue;
 
-                                for (auto tgd = tg->toObject()["d"].toArray().begin(); tgd != tg->toObject()["d"].toArray().end(); ++tgd ) {
+                                QJsonArray tg_data = tg->toObject()["d"].toArray();
+                                QJsonArray dg_data = dg->toObject()["d"].toArray();
+                                QJsonArray::iterator tgd;
+                                QJsonArray::iterator dgd;
+                                for (tgd = tg_data.begin(); tgd != tg_data.end(); ++tgd ) {
                                     if (!tgd->isObject()) continue;
                                     if (!(tgd->toObject().contains("t") && tgd->toObject().contains("v"))) continue;
 
-                                    for (auto dgd = dg->toObject()["d"].toArray().begin(); dgd != dg->toObject()["d"].toArray().end(); ++dgd ) {
+                                    for (dgd = dg_data.begin(); dgd != dg_data.end(); ++dgd ) {
                                         if (!dgd->isObject()) continue;
                                         if (!(dgd->toObject().contains("t") && dgd->toObject().contains("v"))) continue;
 
@@ -561,6 +587,8 @@ void JSONWorker::process()
                                             }
                                         }
 
+                                        ///@todo need to copy this back into tmpl itself
+
                                         // Need to flag that a change was made in order for document to be outputted
                                         change_made = true;
                                     }
@@ -569,9 +597,13 @@ void JSONWorker::process()
                         }
                     }
                     if (change_made) {
-                        document = QJsonDocument(*tmpl);
+                        Generator::getInstance()->saveJsonTemplate(tmpl);
+                        document = QJsonDocument(tmpl);
+
+                        //LOG_INFO() << document.toJson().simplified();
                     }
                 }
+                // Give Mutex
             }
 
             // Do not use a template, just package the object generated by the script
@@ -583,6 +615,8 @@ void JSONWorker::process()
                 LOG_INFO() << document.toJson().simplified();
                 error.error = QJsonParseError::NoError;
             }
+
+            Generator::getInstance()->closeJsonTemplate();
         }
 
         m_engine->deleteLater();

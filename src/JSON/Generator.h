@@ -93,11 +93,13 @@ public:
     };
     Q_ENUMS(OperationMode)
 
-    ///@note added for templating of the input JSON
-    QJsonObject *m_template;
-
 public:
     static Generator *getInstance();
+
+    // New
+    QJsonObject openJsonTemplate();
+    void closeJsonTemplate();
+    void saveJsonTemplate(QJsonObject &tmpl);
 
     QString jsonMapData() const;
     QString jsonMapFilename() const;
@@ -120,8 +122,6 @@ public slots:
 
 private slots:
     void reset();
-
-    ///@note moving this to a public function that manager can call
     void readData(const QByteArray &data);
 
 private:
@@ -129,6 +129,8 @@ private:
     quint64 m_frameCount;
     QSettings m_settings;
     QString m_jsonMapData;
+    QJsonObject m_jsonTemplate;
+    QMutex m_jsonTemplateMutex;
     OperationMode m_opMode;
 
     QThread m_workerThread;
