@@ -115,8 +115,8 @@ bool Dataset::read(const QJsonObject &object)
         title = title.replace("\r", "");
         value = value.replace("\n", "");
         value = value.replace("\r", "");
-        tick = value.replace("\n", "");
-        tick = value.replace("\r", "");
+        tick = tick.replace("\n", "");
+        tick = tick.replace("\r", "");
         units = units.replace("\n", "");
         units = units.replace("\r", "");
         widget = widget.replace("\n", "");

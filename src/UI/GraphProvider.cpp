@@ -276,17 +276,19 @@ void GraphProvider::drawGraphs()
             for (int j = 0; j < group->datasetCount(); ++j)
             {
                 auto dataset = group->datasets().at(j);
-                if (dataset->graph())
+                if (dataset->graph()) {
                     m_datasets.append(dataset);
+                    //LOG_INFO() << dataset->jsonData();
+                    //LOG_INFO() << "t:" << dataset->title() << "v:" << dataset->value() << "x" << dataset->tick();
+                }
             }
         }
 
         // Create list with dataset values (converted to double)
-        for (int i = 0; i < graphCount(); ++i)
-        {
+        for (int i = 0; i < graphCount(); ++i) {
+
             // Register dataset for this graph
-            if (m_points.count() < (i + 1))
-            {
+            if (m_points.count() < (i + 1)) {
                 auto vector = new QVector<double>;
                 m_points.append(vector);
             }
@@ -297,6 +299,8 @@ void GraphProvider::drawGraphs()
             // Only handle the new point data if it is ahead in time from the last data.
             // The exception is if Time < 0, which indicates explicit timing is not used.
             double tick = getTick(i);
+            //LOG_INFO() << "tick:" << tick << "currentTime:" << m_currentTime.at(i) ;
+
             if ((m_currentTime.at(i) < tick) || (tick == 0.0) ) {
                 m_currentTime.replace(i, tick);
 

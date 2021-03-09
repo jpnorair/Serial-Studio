@@ -53,6 +53,11 @@ signals:
 public:
     JSONWorker(const QByteArray &data, const quint64 frame, const QDateTime &time);
 
+//private:
+    // New, used to modify the Json Template when new data arrives
+    //void modifyJsonValue(QJsonValue& destValue, const QString& path, const QJsonValue& newValue);
+    //void modifyJsonValue(QJsonDocument* doc, const QString& path, const QJsonValue& newValue);
+
 public slots:
     void process();
 
@@ -97,9 +102,9 @@ public:
     static Generator *getInstance();
 
     // New
-    QJsonObject openJsonTemplate();
+    QJsonDocument* openJsonTemplate();
     void closeJsonTemplate();
-    void saveJsonTemplate(QJsonObject &tmpl);
+    void saveJsonTemplate(QJsonDocument &tmpl);
 
     QString jsonMapData() const;
     QString jsonMapFilename() const;
@@ -129,7 +134,8 @@ private:
     quint64 m_frameCount;
     QSettings m_settings;
     QString m_jsonMapData;
-    QJsonObject m_jsonTemplate;
+    //QJsonObject m_jsonTemplate;
+    QJsonDocument m_jsonTemplate;
     QMutex m_jsonTemplateMutex;
     OperationMode m_opMode;
 
