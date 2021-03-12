@@ -44,22 +44,6 @@ Window {
     implicitHeight: implicitWidth + 96
 
     //
-    // Set the level color randomly from an array
-    //
-    property var colorPalette: [
-        "#f94144",
-        "#f3722c",
-        "#f8961e",
-        "#f9844a",
-        "#f9c74f",
-        "#90be6d",
-        "#43aa8b",
-        "#4d908e",
-        "#577590",
-        "#277da1"
-    ]
-
-    //
     // Colors
     //
     property color tankColor: "#e6e0b2"
@@ -67,22 +51,25 @@ Window {
     property color titleColor: "#8ecd9d"
     property color emptyColor: "#121218"
     property color levelColor:  {
-        if (colorPalette.length > index)
-            return colorPalette[index]
-
-        return colorPalette[colorPalette.length % index]
+        if ((root.measMinValue < root.minimumValue) || (root.measMaxValue > root.maximumValue))
+            return "#ff303b";
+        else
+            return "#00ff28";
     }
 
     //
     // Custom properties
     //
-    property real level: 0
+    property real minlevel: 0
+    property real maxlevel: 0
     property string units: ""
     property int datasetIndex: 0
     property real tankRadius: 20
     property real currentValue: 0
     property real minimumValue: 0
     property real maximumValue: 10
+    property real measMinValue: Infinity
+    property real measMaxValue: -Infinity
 
     //
     // Connections with widget manager
@@ -103,6 +90,8 @@ Window {
     //   About 6% of the UI thread is spent here
     function updateValues() {
         if (Cpp_UI_WidgetProvider.barDatasetCount() > root.datasetIndex) {
+            var level = 0
+
             root.minimumValue = Cpp_UI_WidgetProvider.barMin(root.datasetIndex)
             root.maximumValue = Cpp_UI_WidgetProvider.barMax(root.datasetIndex)
             root.currentValue = Cpp_UI_WidgetProvider.bar(root.datasetIndex)
@@ -112,14 +101,22 @@ Window {
             if (root.maximumValue > root.minimumValue)  {
                 var range = root.maximumValue - root.minimumValue
                 var relat = root.currentValue - root.minimumValue
-                root.level = relat / range
+                level = relat / range
             }
 
-            else
-                root.level = 0
+            if (level > 1) {
+                level = 1
+            }
 
-            if (root.level > 1)
-                root.level = 1
+            if (root.currentValue < root.measMinValue) {
+                root.measMinValue = root.currentValue
+                root.minlevel = level
+            }
+            if (root.currentValue > root.measMaxValue) {
+                root.measMaxValue = root.currentValue
+                root.maxlevel = level
+            }
+
         }
 
         else {
@@ -161,7 +158,8 @@ Window {
             //
             Rectangle {
                 anchors.fill: parent
-                anchors.topMargin: (1 - root.level) * tank.height
+                anchors.topMargin: (1 - root.maxlevel) * tank.height
+                anchors.bottomMargin: (1 - root.minlevel) * tank.height
 
                 border.width: 2
                 color: root.levelColor

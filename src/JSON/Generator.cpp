@@ -371,8 +371,11 @@ void Generator::readData(const QByteArray &data)
     QJSEngine* engine = nullptr;
     processFrame(data, m_frameCount, QDateTime::currentDateTime(), engine);
 
-    // This uses a separate thread to process the input.
-    // Doing so can create out-of-order problems.
+    /// This uses a separate thread to process the input.
+    /// The idea is to take load out of the UI thread, but doing so can create
+    /// out-of-order problems.  A better idea is to put the data reception
+    /// in a different thread than the UI.
+    ///@todo implement that data reception thread.
     /*
     // Create new worker thread to read JSON data
     QThread *thread = new QThread;

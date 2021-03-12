@@ -36,6 +36,7 @@
 #include <QJsonValue>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QMutex>
 
 #include "Frame.h"
 #include "FrameInfo.h"
